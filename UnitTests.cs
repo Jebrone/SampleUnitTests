@@ -14,17 +14,7 @@ namespace SampleUnitTests
         // Driver is normally created for Page models and initialized in a setup
         private IWebDriver Driver;
 
-        // Base URLs are created as a variable because they may be used more and so they're easy to track and is often static
-        private static Uri BASE_URL = new Uri("https://dotnetfiddle.net/");
-
-        // Locators are held in the page objects and are often hidden so that only actions can be used on them
-        // These are examples of different ways to locate an object
-        private By RunButton = By.Id("run-button");
-        private By OutputBox = By.XPath("//div[@id='output']");
-        private By LoaderOverlay = By.CssSelector("div#stats-loader");
-        private By NugetSearchBar = By.CssSelector(".nuget-panel input");
-        private By NugetPackageList = By.CssSelector(".nuget-packages .package-name");
-        private By MenuContainer = By.Id("menu");
+        DotNetFiddle MainPage;
         
         [SetUp]
         public void Setup()
@@ -32,10 +22,10 @@ namespace SampleUnitTests
             // Driver is Initialized and can be managed here for initial setup
             // Multiple browsers can be instantiated here
             Driver = new ChromeDriver();
-            //Driver.Manage().Window.FullScreen();
+            Driver.Manage().Window.FullScreen();
 
-            // The driver often is passed into a page object model then the page can navigate to the URL
-            Driver.Navigate().GoToUrl(BASE_URL);
+            MainPage = new DotNetFiddle(Driver);
+            MainPage.NavigateTo();
         }
 
         [TearDown]
@@ -55,14 +45,9 @@ namespace SampleUnitTests
         [Description("Test 1: Test Output")]
         public void Test1()
         {
-            Driver.FindElement(RunButton).Click();
+            MainPage.ClickRunButton();
 
-            WebDriverWait wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(10));
-            wait.Until(ExpectedConditions.InvisibilityOfElementLocated(LoaderOverlay));
-
-            String output = Driver.FindElement(OutputBox).Text;
-
-            Assert.AreEqual(output, "Hello World");
+            Assert.AreEqual(MainPage.GetOutputText(), "Hello World");
         }
 
         /// <summary>
@@ -74,22 +59,9 @@ namespace SampleUnitTests
         [Description("Test 2: Check Nuget Selection")]
         public void Test2(String package, String version)
         {
-            Driver.FindElement(NugetSearchBar).SendKeys(package);
+            MainPage.AddNewNugetPackage(package, version);
 
-            WebDriverWait wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(15));
-
-            By NUnitMenuItem = By.XPath($"//a[text()='{package}']");
-            wait.Until(ExpectedConditions.ElementIsVisible(NUnitMenuItem)).Click();
-
-            By NUnitMenuItemList = By.XPath($"//a[text()='{package}']/../ul/li/a[contains(@version-name, '{version}')]");
-            wait.Until(ExpectedConditions.ElementIsVisible(NUnitMenuItemList)).Click();
-
-            wait.Until(ExpectedConditions.InvisibilityOfElementLocated(MenuContainer));
-
-            // There is no functionality inside the website that allows you to verify the Nuget package version
-            List<String> nugetList = new List<String>(Driver.FindElements(NugetPackageList).Select(element => element.Text));
-
-            Assert.IsTrue(nugetList.Contains(package));
+            Assert.IsTrue(MainPage.GetListOfNugetPackages().Contains(package));
         }
     }
 }
